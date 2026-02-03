@@ -31,7 +31,40 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Based on `.specify/memory/constitution.md`:
+
+### I. Modular Architecture
+- [ ] Feature organized as self-contained module with clear boundaries
+- [ ] No direct access to internals of other modules
+- [ ] Inter-module communication through well-defined interfaces
+- [ ] Shared utilities explicitly designed for reuse (not extracted from single-use)
+
+### II. Test-First Development (NON-NEGOTIABLE)
+- [ ] Tests written before implementation code
+- [ ] Red-Green-Refactor cycle documented in tasks
+- [ ] Test strategy covers acceptance criteria from spec
+
+### III. Dependency & Configuration Versioning
+- [ ] External model versions pinned and documented (e.g., EQuIP_3B version)
+- [ ] LM Studio API version and configuration recorded
+- [ ] Elasticsearch version compatibility declared
+- [ ] Index mappings versioned and stored in repository
+- [ ] Prompt templates versioned
+- [ ] Configuration changes follow semantic versioning
+
+### IV. Reproducibility & Observability
+- [ ] Query translation logging designed (NL input, prompt, DSL output, ES response)
+- [ ] LLM API parameters documented for reproducibility (temperature, sampling)
+- [ ] Query DSL validation errors logged
+- [ ] Performance metrics tracking designed (LLM latency, ES execution time, success rate)
+- [ ] Connection failure logging with retry tracking
+- [ ] Structured logging format (JSON) planned
+
+### V. Integration Testing
+- [ ] Integration tests planned for cross-module interactions
+- [ ] Elasticsearch integration tests include containerized instances
+- [ ] End-to-end NLP pipeline testing designed
+- [ ] Realistic data volumes planned for integration tests
 
 ## Project Structure
 
