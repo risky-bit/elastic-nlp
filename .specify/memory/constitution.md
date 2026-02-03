@@ -2,28 +2,45 @@
 ==============================================================================
 SYNC IMPACT REPORT
 ==============================================================================
-Version change: 1.0.0 → 1.1.0
-Modified principles:
-  - III. Data & Model Versioning → Refined for pre-trained model usage
-  - IV. Reproducibility & Observability → Adjusted for query translation (not training)
+Version change: 1.1.0 → 1.2.0
+Modified principles: None
 Added sections:
-  - Project-specific constraints (Elasticsearch 8.15, LM Studio)
-  - Query translation specific guidelines
-Removed sections:
-  - Model training specific rules (moved to query translation context)
+  - Project Goals and Phases
+  - Experimental methodology section
+  - Decision criteria for phase transitions
+Removed sections: None
 Templates requiring updates:
-  ✅ plan-template.md - Constitution Check gates still valid
+  ✅ plan-template.md - No changes needed (gates still valid)
   ✅ spec-template.md - No changes needed
   ✅ tasks-template.md - No changes needed
 Follow-up TODOs: None
-Rationale: MINOR bump (1.1.0) because we're refining principles to match actual
-project scope (query translation vs model training) without breaking governance
+Rationale: MINOR bump (1.2.0) because we're expanding project scope documentation
+to include multi-phase experimental approach without changing core principles
 ==============================================================================
 -->
 
 # MOI Elasticsearch NLP Query System - Constitution
 
-**Project**: Natural language to Elasticsearch Query DSL translation system using EQuIP_3B model
+**Project**: Multi-phase experimental evaluation of NLP-to-Elasticsearch query approaches for MOI production deployment
+
+## Project Goals
+
+This project evaluates and compares different approaches to natural language query translation for Elasticsearch, specifically tailored for MOI use cases (person lookups, violations, vehicles). The goal is to identify the optimal solution through controlled experiments across multiple phases.
+
+### Phase Structure
+
+1. **Phase 1 - Baseline**: EQuIP_3B via LM Studio + Elasticsearch 8.15
+2. **Phase 2A - Custom Wrapper**: Pre/post-processing with orchestration
+3. **Phase 2B - Agent Builder**: Elastic Cloud 9.2 with Agent Builder MCP
+4. **Phase 3 - Fine-tuning**: LoRA fine-tuning if needed (conditional)
+
+### Success Metrics
+
+- **Query DSL validity rate**: % of generated queries that are syntactically valid
+- **Result accuracy rate**: % of queries that return correct results
+- **Phase 1 threshold**: >70% accuracy → proceed to Phase 2
+- **Phase 2 threshold**: >80% accuracy → production deployment
+- **Phase 3 trigger**: <80% accuracy after Phase 2
 
 ## Core Principles
 
@@ -113,11 +130,30 @@ Features requiring cross-module interaction or external system integration must 
 
 ### Technology Stack Requirements
 
+**Phase 1 & 2A**:
 - **Python**: 3.10+ (type hints mandatory)
-- **Elasticsearch**: 8.15 compatibility MUST be maintained (no 9.x features)
-- **LM Studio**: Local API (localhost:1234) - no cloud LLM calls permitted
-- **Model**: EQuIP_3B via LM Studio API (model version must be documented)
-- **Dependencies**: Keep minimal - only `elasticsearch`, `requests`, `python-dotenv` plus testing/dev tools
+- **Elasticsearch**: 8.15 (local or MOI environment)
+- **LM Studio**: Local API (localhost:1234)
+- **Model**: EQuIP_3B via LM Studio API
+- **Dependencies**: Minimal - `elasticsearch`, `requests`, `python-dotenv` + testing/dev tools
+
+**Phase 2B**:
+- **Elastic Cloud**: 9.2 with Agent Builder
+- **MCP Integration**: Agent Builder endpoint connectivity
+- **Model**: EQuIP_3B connected via MCP protocol
+
+**Phase 3** (conditional):
+- **Fine-tuning**: LoRA adapters for EQuIP_3B
+- **Training data**: 500-1000 MOI-specific query examples
+- **Training infrastructure**: GPU environment for fine-tuning
+
+### Experimental Methodology
+
+- **Test corpus**: 30-50 MOI-style queries consistent across all phases
+- **Query categories**: Person lookups, violations, vehicle records
+- **Metrics tracking**: Valid DSL %, correct results %, latency per phase
+- **Comparison baseline**: Phase 1 results serve as baseline for all improvements
+- **Reproducibility**: Same queries, same Elasticsearch indices across phases
 
 ### Query Translation Quality
 
@@ -208,4 +244,4 @@ Features requiring cross-module interaction or external system integration must 
 - Sync Impact Report MUST be generated for each amendment
 - Dependent templates and artifacts MUST be updated to maintain consistency
 
-**Version**: 1.1.0 | **Ratified**: 2026-02-03 | **Last Amended**: 2026-02-03
+**Version**: 1.2.0 | **Ratified**: 2026-02-03 | **Last Amended**: 2026-02-03
