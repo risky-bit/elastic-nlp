@@ -1,0 +1,18 @@
+# Phase 1 Baseline - NL to Elasticsearch Query System
+# Python 3.10+ required
+
+# Core Dependencies
+elasticsearch==8.11.1  # Official Elasticsearch Python client (ES 8.11 compatibility)
+requests==2.31.0       # HTTP client for vLLM API calls
+python-dotenv==1.0.0   # Environment configuration management
+click==8.1.7           # Command-line interface framework
+
+# Testing Dependencies
+pytest==7.4.3          # Testing framework
+pytest-docker==2.0.1   # Docker container management for integration tests
+pytest-cov==4.1.0      # Code coverage reporting
+
+# Development Dependencies (optional but recommended)
+black==23.12.1         # Code formatting
+flake8==7.0.0          # Linting
+mypy==1.7.1            # Type checking

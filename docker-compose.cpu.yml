@@ -1,0 +1,63 @@
+version: '3.8'
+
+# CPU-only version (no GPU required, slower inference)
+# Use this if you don't have NVIDIA GPU or Docker GPU support
+# Start with: docker-compose -f docker-compose.cpu.yml up -d
+
+services:
+  # Elasticsearch 8.11 - Document store for MOI data
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: moi-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - ELASTIC_PASSWORD=elastic  # Change this in production!
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - moi-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    mem_limit: 4g
+    restart: unless-stopped
+
+  # vLLM Server (CPU mode) - Slower but works without GPU
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: moi-vllm-cpu
+    command: --model "EQuIP-Queries/EQuIP_3B" --host 0.0.0.0 --port 8000 --device cpu --dtype float32
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - VLLM_CPU_ONLY=1
+      - CUDA_VISIBLE_DEVICES=""
+    ports:
+      - "8000:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    networks:
+      - moi-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/v1/models || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s  # CPU mode takes longer to load
+    mem_limit: 8g  # CPU mode needs more RAM
+    restart: unless-stopped
+
+networks:
+  moi-network:
+    driver: bridge
+
+volumes:
+  es_data:
+    driver: local

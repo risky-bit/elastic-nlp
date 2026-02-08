@@ -1,0 +1,69 @@
+{
+  "person_details": {
+    "mappings": {
+      "properties": {
+        "person_id": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "name_ar": {
+          "type": "text",
+          "analyzer": "arabic"
+        },
+        "nationality": {
+          "type": "keyword"
+        },
+        "dob": {
+          "type": "date",
+          "format": "yyyy-MM-dd||yyyy-MM-dd'T'HH:mm:ss||epoch_millis"
+        },
+        "age": {
+          "type": "integer"
+        },
+        "gender": {
+          "type": "keyword"
+        },
+        "city": {
+          "type": "keyword"
+        },
+        "address": {
+          "type": "text"
+        },
+        "phone": {
+          "type": "keyword"
+        },
+        "email": {
+          "type": "keyword"
+        },
+        "occupation": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "marital_status": {
+          "type": "keyword"
+        },
+        "created_at": {
+          "type": "date",
+          "format": "yyyy-MM-dd'T'HH:mm:ss||epoch_millis"
+        },
+        "updated_at": {
+          "type": "date",
+          "format": "yyyy-MM-dd'T'HH:mm:ss||epoch_millis"
+        }
+      }
+    }
+  }
+}
