@@ -4,7 +4,7 @@
     "prs_gdr": "Gender. Keyword field. Values are EXACTLY 'Male' or 'Female'. Example: {\"term\": {\"prs_gdr\": \"Male\"}}",
     "prs_dob": "Date of birth as YYYY-MM-DD string. Use range query. Example for born after 1980: {\"range\": {\"prs_dob\": {\"gte\": \"1980-01-01\"}}}",
     "prs_qid": "Qatar ID number. Keyword field.",
-    "person_natcde": "Nationality as numeric country code. Keyword field. CRITICAL: use the CODE not the country name. Codes: Qatar=634, Pakistan=586, India=356, Egypt=818, Saudi Arabia=682, UAE=784. Example for Qatari: {\"term\": {\"person_natcde\": \"634\"}}. Example for Pakistani: {\"term\": {\"person_natcde\": \"586\"}}"
+    "person_natcde": "Nationality. Use the NATIONALITY NAME directly (e.g. 'Qatari', 'Pakistani', 'Indian'). Example for Qatari: {\"term\": {\"person_natcde\": \"Qatari\"}}. Example for Pakistani: {\"term\": {\"person_natcde\": \"Pakistani\"}}"
   },
   "moi-vehicle-info-v1": {
     "VRG_PLTNUM": "Plate number. Text field. Example: {\"match\": {\"VRG_PLTNUM\": \"A12345\"}}",
@@ -14,7 +14,8 @@
     "CLR_CLRENGDSC": "Color. Text field. Values are UPPERCASE: 'WHITE', 'BLACK', 'SILVER'. Example: {\"match\": {\"CLR_CLRENGDSC\": \"WHITE\"}}",
     "VRG_STATUS": "Registration status. Text field. 'ACT'=active, 'EXP'=expired. Example active: {\"match\": {\"VRG_STATUS\": \"ACT\"}}",
     "VRG_ENDDT": "Registration expiry date. Date field. Example expired before 2024: {\"range\": {\"VRG_ENDDT\": {\"lt\": \"2024-01-01\"}}}",
-    "VRG_STADTE": "Registration start date. Date field. Example registered in 2022: {\"range\": {\"VRG_STADTE\": {\"gte\": \"2022-01-01\", \"lte\": \"2022-12-31\"}}}"
+    "VRG_STADTE": "Registration start date. Date field. Example registered in 2022: {\"range\": {\"VRG_STADTE\": {\"gte\": \"2022-01-01\", \"lte\": \"2022-12-31\"}}}",
+    "VRG_OWNQID": "Owner Qatar ID. Links to person index via prs_qid."
   },
   "moi-violations-v1": {
     "VLN_TYPE": "Violation type. Keyword field. Values EXACTLY: 'SPEEDING', 'RED_LIGHT', 'PARKING', 'SEATBELT', 'MOBILE_PHONE'. Example: {\"term\": {\"VLN_TYPE\": \"SPEEDING\"}}",
@@ -24,6 +25,48 @@
     "VLN_DATE_DATE": "Date of violation YYYY-MM-DD. Date field. Example in 2024: {\"range\": {\"VLN_DATE_DATE\": {\"gte\": \"2024-01-01\", \"lte\": \"2024-12-31\"}}}",
     "VLN_YEAR": "Year as string. Keyword field. Example: {\"term\": {\"VLN_YEAR\": \"2024\"}}",
     "VLN_PLTNUM": "Plate number of vehicle in violation. Keyword field.",
-    "VLN_OWNQID": "Owner Qatar ID. Keyword field. Links to person index."
+    "VLN_OWNQID": "Owner Qatar ID. Links to person index via prs_qid."
+  },
+  "moi-exit-entry-tts-details-v1": {
+    "TRX_QIDNO": "Traveller Qatar ID. Links to person index via prs_qid.",
+    "TRX_DIRECTION": "Travel direction. Text field. Values: 'IN' (entry) or 'OUT' (exit). Example entry: {\"match\": {\"TRX_DIRECTION\": \"IN\"}}",
+    "TRX_TYPE_DESC": "Transaction description. Values: 'ENTRY TRANSACTION' or 'EXIT TRANSACTION'. Example: {\"match\": {\"TRX_TYPE_DESC\": \"EXIT TRANSACTION\"}}",
+    "TRX_DATE": "Date of travel. Date field. Example in 2024: {\"range\": {\"TRX_DATE\": {\"gte\": \"2024-01-01\", \"lte\": \"2024-12-31\"}}}",
+    "BORDER_CODE_DESC": "Border crossing point. Text field. Values: 'HAMAD INTERNATIONAL AIRPORT', 'ABU SAMRA BORDER', 'SALWA BORDER', 'DOHA PORT'. Example: {\"match\": {\"BORDER_CODE_DESC\": \"HAMAD INTERNATIONAL AIRPORT\"}}",
+    "TRX_TRIP_TYP_DESC": "Travel mode. Text field. Values: 'FLIGHT', 'LAND', 'SEA'. Example: {\"match\": {\"TRX_TRIP_TYP_DESC\": \"FLIGHT\"}}",
+    "TRX_FLTNUM": "Flight number. Text field. Example: {\"match\": {\"TRX_FLTNUM\": \"QR401\"}}"
+  },
+  "moi-visa-main-details-v1": {
+    "HLD_QIDNO": "Visa holder Qatar ID. Links to person index via prs_qid.",
+    "VISA_TYPE_DESC": "Visa type description. Text field. Values: 'Work Visa', 'Visit Visa', 'Residence Permit', 'Family Visa', 'Student Visa'. Example: {\"match\": {\"VISA_TYPE_DESC\": \"Work Visa\"}}",
+    "VSA_TYPCDE": "Visa type code. Text field. '40'=Work Visa, '11'=Visit Visa, '20'=Residence Permit, '35'=Family Visa, '50'=Student Visa.",
+    "VSA_ISSDTE": "Visa issue date. Date field. Example issued in 2022: {\"range\": {\"VSA_ISSDTE\": {\"gte\": \"2022-01-01\", \"lte\": \"2022-12-31\"}}}",
+    "VSA_EXPDTE": "Visa expiry date. Date field. Example expiring before 2025: {\"range\": {\"VSA_EXPDTE\": {\"lt\": \"2025-01-01\"}}}",
+    "VSA_RCDSTS": "Visa record status. Text field. '13'=active, '14'=expired.",
+    "NAT_CDENUM": "Holder nationality. Use nationality NAME (e.g. 'Qatari', 'Pakistani'). Example: {\"term\": {\"NAT_CDENUM\": \"Pakistani\"}}"
+  },
+  "moi-sponsor-details-v1": {
+    "SPONSOR_QID": "Sponsor Qatar ID. Links to person index via prs_qid.",
+    "SPONSORED_QID": "Sponsored person Qatar ID. Links to person index via prs_qid.",
+    "SPONSOR_TYPE": "Type of sponsorship. Text field. '1'=individual, '2'=company.",
+    "FIRST_ENTRY_DATE": "Date sponsored person first entered Qatar. Date field. Example: {\"range\": {\"FIRST_ENTRY_DATE\": {\"gte\": \"2020-01-01\"}}}",
+    "MDS_DPTENGNAM": "Department name in English. Text field."
+  },
+  "moi-relationship-details-v1": {
+    "HUSBAND_QID_NO": "Husband Qatar ID. Links to person index via prs_qid.",
+    "WIFE_QID_NO": "Wife Qatar ID. Links to person index via prs_qid.",
+    "MARRIAGE_DATE": "Marriage date. Date field. Example married after 2015: {\"range\": {\"MARRIAGE_DATE\": {\"gte\": \"2015-01-01\"}}}",
+    "MARRIAGE_CERTIFICATE_NUMBER": "Official certificate number. Text field.",
+    "DIVORCE_DATE": "Divorce date if applicable. Date field. Null if still married."
+  },
+  "moi-visa-application-details-v1": {
+    "APL_PRSQIDNO": "Applicant Qatar ID. Links to person index via prs_qid.",
+    "APL_TYPCDE": "Application type code. Same as visa type codes.",
+    "APL_RCDSTS": "Application status. '2'=approved, '3'=rejected.",
+    "APL_APLDTE": "Application date. Date field.",
+    "APL_EXPDTE": "Application expiry date. Date field.",
+    "TOT_APPR": "Total approved quota. Integer.",
+    "USED_TOT_APPR": "Used quota. Integer.",
+    "REM_TOT_APPR": "Remaining quota. Integer."
   }
 }

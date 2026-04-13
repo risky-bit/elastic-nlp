@@ -22,6 +22,7 @@ from elasticsearch.exceptions import ConnectionError as ESConnectionError, Trans
 from src.es_client import ESClient
 from src.llm_client import VLLMClient
 from src.config import Config
+from src.dsl_transformer import DSLTransformer
 
 
 class QueryGenerator:
@@ -53,6 +54,7 @@ class QueryGenerator:
         self.logger = logger
         self.prompt_template: Optional[str] = None
         self._field_descriptions: Optional[Dict[str, Any]] = None
+        self._transformer = DSLTransformer(logger)
 
     def load_prompt_template(self, template_path: str) -> str:
         """
@@ -284,6 +286,9 @@ class QueryGenerator:
                 # Log failed translation
                 self._log_translation(result, prompt, mapping_hash)
                 return result
+
+            # Step 4b: Transform DSL (e.g. nationality names → numeric codes)
+            parsed_dsl = self._transformer.transform(parsed_dsl)
 
             # Step 5: Execute query on Elasticsearch
             es_start = time.time()

@@ -14,6 +14,7 @@ import time
 from typing import Dict, Any, List
 
 from src.es_client import ESClient
+from src.dsl_transformer import DSLTransformer
 
 
 class MultiIndexExecutor:
@@ -24,6 +25,7 @@ class MultiIndexExecutor:
     def __init__(self, es_client: ESClient, logger: logging.Logger):
         self.es_client = es_client
         self.logger = logger
+        self._transformer = DSLTransformer(logger)
 
     def execute_plan(self, plan: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -58,6 +60,9 @@ class MultiIndexExecutor:
 
             # Inject values from previous steps
             query = self._inject_step_values(query, step_results)
+
+            # Transform DSL values (e.g. nationality names → numeric codes)
+            query = self._transformer._transform_node(query)
 
             # Bail early if injection produced an empty terms list
             # (means the previous step found no results — no point continuing)
