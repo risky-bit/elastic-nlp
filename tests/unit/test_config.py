@@ -7,6 +7,8 @@ Following TDD: These tests are written FIRST and should FAIL until config.py is 
 
 import pytest
 import os
+import importlib
+import sys
 from unittest.mock import patch
 
 
@@ -27,7 +29,9 @@ class TestConfig:
 
         # Act & Assert
         with patch.dict(os.environ, env_vars, clear=True):
-            from src.config import Config
+            import src.config as config_module
+            importlib.reload(config_module)
+            Config = config_module.Config
 
             assert Config.ES_HOST == 'localhost'
             assert Config.ES_PORT == 9200  # Should be integer

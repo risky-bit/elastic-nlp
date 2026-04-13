@@ -1,0 +1,29 @@
+{
+  "moi-gp-all-profiles-details-v1": {
+    "CL_person_full_name_en": "Full name in English. Use match query. Example: {\"match\": {\"CL_person_full_name_en\": \"Ahmed\"}}",
+    "prs_gdr": "Gender. Keyword field. Values are EXACTLY 'Male' or 'Female'. Example: {\"term\": {\"prs_gdr\": \"Male\"}}",
+    "prs_dob": "Date of birth as YYYY-MM-DD string. Use range query. Example for born after 1980: {\"range\": {\"prs_dob\": {\"gte\": \"1980-01-01\"}}}",
+    "prs_qid": "Qatar ID number. Keyword field.",
+    "person_natcde": "Nationality as numeric country code. Keyword field. CRITICAL: use the CODE not the country name. Codes: Qatar=634, Pakistan=586, India=356, Egypt=818, Saudi Arabia=682, UAE=784. Example for Qatari: {\"term\": {\"person_natcde\": \"634\"}}. Example for Pakistani: {\"term\": {\"person_natcde\": \"586\"}}"
+  },
+  "moi-vehicle-info-v1": {
+    "VRG_PLTNUM": "Plate number. Text field. Example: {\"match\": {\"VRG_PLTNUM\": \"A12345\"}}",
+    "MNF_ENSHDESC": "Vehicle MAKE (manufacturer). Text field. Values are UPPERCASE: 'TOYOTA', 'NISSAN', 'BMW', 'KIA'. Example for Toyota: {\"match\": {\"MNF_ENSHDESC\": \"TOYOTA\"}}",
+    "VEH_MODEL": "Vehicle MODEL (e.g. CAMRY, PATROL, X5). Text field. Use only when model name is specified. Example: {\"match\": {\"VEH_MODEL\": \"CAMRY\"}}",
+    "VEH_MODELYEAR": "Year as 4-digit string. Text field. Example: {\"term\": {\"VEH_MODELYEAR\": \"2022\"}}",
+    "CLR_CLRENGDSC": "Color. Text field. Values are UPPERCASE: 'WHITE', 'BLACK', 'SILVER'. Example: {\"match\": {\"CLR_CLRENGDSC\": \"WHITE\"}}",
+    "VRG_STATUS": "Registration status. Text field. 'ACT'=active, 'EXP'=expired. Example active: {\"match\": {\"VRG_STATUS\": \"ACT\"}}",
+    "VRG_ENDDT": "Registration expiry date. Date field. Example expired before 2024: {\"range\": {\"VRG_ENDDT\": {\"lt\": \"2024-01-01\"}}}",
+    "VRG_STADTE": "Registration start date. Date field. Example registered in 2022: {\"range\": {\"VRG_STADTE\": {\"gte\": \"2022-01-01\", \"lte\": \"2022-12-31\"}}}"
+  },
+  "moi-violations-v1": {
+    "VLN_TYPE": "Violation type. Keyword field. Values EXACTLY: 'SPEEDING', 'RED_LIGHT', 'PARKING', 'SEATBELT', 'MOBILE_PHONE'. Example: {\"term\": {\"VLN_TYPE\": \"SPEEDING\"}}",
+    "VLN_STATUS": "Payment status. Keyword field. Values EXACTLY: 'PAID' or 'UNPAID'. Example: {\"term\": {\"VLN_STATUS\": \"UNPAID\"}}",
+    "VLN_PLCDSC": "Road/location name. Keyword field. Values: 'CORNICHE ROAD', 'AL WAAB STREET', 'SALWA ROAD', 'AL RAYYAN ROAD', 'AL SADD STREET'. Example: {\"term\": {\"VLN_PLCDSC\": \"CORNICHE ROAD\"}}",
+    "VLN_TOTAMT": "Fine amount in QAR. Float field. Example over 1000: {\"range\": {\"VLN_TOTAMT\": {\"gt\": 1000}}}",
+    "VLN_DATE_DATE": "Date of violation YYYY-MM-DD. Date field. Example in 2024: {\"range\": {\"VLN_DATE_DATE\": {\"gte\": \"2024-01-01\", \"lte\": \"2024-12-31\"}}}",
+    "VLN_YEAR": "Year as string. Keyword field. Example: {\"term\": {\"VLN_YEAR\": \"2024\"}}",
+    "VLN_PLTNUM": "Plate number of vehicle in violation. Keyword field.",
+    "VLN_OWNQID": "Owner Qatar ID. Keyword field. Links to person index."
+  }
+}

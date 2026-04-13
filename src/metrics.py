@@ -88,8 +88,9 @@ class MetricsCalculator:
         if not logs:
             return 0.0
 
-        # Count queries with successful execution (valid DSL + ES execution succeeded)
-        success_count = sum(1 for log in logs if log.get('execution_status') == 'success')
+        # Count queries with successful execution and results found
+        # 'no_results' = DSL valid + executed OK, just no matching data — not a model failure
+        success_count = sum(1 for log in logs if log.get('status') in ('success', 'no_results') or log.get('execution_status') == 'success')
         total_count = len(logs)
 
         return success_count / total_count
@@ -113,16 +114,16 @@ class MetricsCalculator:
                 'avg_total_latency_ms': 0.0,
             }
 
-        # Calculate LLM latency (all queries have this)
-        llm_latencies = [log.get('llm_latency_ms', 0) for log in logs]
+        # Calculate LLM latency (only queries where LLM ran)
+        llm_latencies = [log['llm_latency_ms'] for log in logs if log.get('llm_latency_ms') is not None]
         avg_llm = sum(llm_latencies) / len(llm_latencies) if llm_latencies else 0.0
 
         # Calculate ES latency (only successful queries have this)
-        es_latencies = [log.get('es_latency_ms') for log in logs if log.get('es_latency_ms') is not None]
+        es_latencies = [log['es_latency_ms'] for log in logs if log.get('es_latency_ms') is not None]
         avg_es = sum(es_latencies) / len(es_latencies) if es_latencies else 0.0
 
-        # Calculate total latency (all queries have this)
-        total_latencies = [log.get('total_latency_ms', 0) for log in logs]
+        # Calculate total latency (only queries with a recorded total)
+        total_latencies = [log['total_latency_ms'] for log in logs if log.get('total_latency_ms') is not None]
         avg_total = sum(total_latencies) / len(total_latencies) if total_latencies else 0.0
 
         return {

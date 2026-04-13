@@ -124,10 +124,10 @@ class ESClient:
         try:
             mapping = client.indices.get_mapping(index=index_name)
             return mapping.body if hasattr(mapping, 'body') else mapping
-        except NotFoundError:
-            raise NotFoundError(f"Index '{index_name}' not found")
+        except NotFoundError as e:
+            raise RuntimeError(f"Index '{index_name}' not found in Elasticsearch") from e
         except Exception as e:
-            raise ConnectionError(f"Failed to retrieve mapping for index '{index_name}': {str(e)}")
+            raise RuntimeError(f"Failed to retrieve mapping for index '{index_name}': {str(e)}") from e
 
     def execute_query(self, index_name: str, query_dsl: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -152,9 +152,9 @@ class ESClient:
             response = client.search(index=index_name, body=query_dsl)
             return response.body if hasattr(response, 'body') else response
         except RequestError as e:
-            raise RequestError(f"Invalid Query DSL for index '{index_name}': {str(e)}")
+            raise RuntimeError(f"Invalid Query DSL for index '{index_name}': {str(e)}") from e
         except Exception as e:
-            raise ConnectionError(f"Failed to execute query on index '{index_name}': {str(e)}")
+            raise RuntimeError(f"Failed to execute query on index '{index_name}': {str(e)}") from e
 
     def close(self) -> None:
         """Close the Elasticsearch connection."""

@@ -126,6 +126,9 @@ class VLLMClient:
             if 'choices' in result and len(result['choices']) > 0:
                 message = result['choices'][0].get('message', {})
                 generated_text = message.get('content', '')
+                # Strip chat end tokens that some models append (e.g. <|im_end|>)
+                for token in ['<|im_end|>', '<|endoftext|>', '</s>', '<|end|>']:
+                    generated_text = generated_text.replace(token, '')
                 return generated_text.strip()
             else:
                 raise RequestException("Invalid response format from vLLM API")

@@ -53,6 +53,10 @@ class Config:
     ES_INDEX_VEHICLE: str = os.getenv('ES_INDEX_VEHICLE', 'vehicle')
     ES_INDEX_VIOLATIONS: str = os.getenv('ES_INDEX_VIOLATIONS', 'violations')
 
+    # Prompt mode: when True, send NL query directly (matches fine-tuned LoRA training format)
+    # When False (default), wrap with full prompt template + field descriptions
+    USE_DIRECT_PROMPT: bool = os.getenv('USE_DIRECT_PROMPT', 'false').lower() == 'true'
+
     @classmethod
     def validate(cls) -> None:
         """

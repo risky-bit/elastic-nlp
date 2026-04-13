@@ -40,7 +40,8 @@ def cli():
 @click.option('--output', '-o', type=click.Path(), help='Save results to JSON file')
 @click.option('--verbose', '-v', is_flag=True, help='Show detailed output including generated DSL')
 @click.option('--interactive', '-i', is_flag=True, help='Enter interactive mode for multiple queries')
-def query(query_text: Optional[str], index: Optional[str], output: Optional[str], verbose: bool, interactive: bool):
+@click.option('--debug', is_flag=True, help='Show full prompt, raw LLM response, validation errors, and ES errors')
+def query(query_text: Optional[str], index: Optional[str], output: Optional[str], verbose: bool, interactive: bool, debug: bool):
     """
     Translate a natural language query to Elasticsearch DSL and execute it.
 
@@ -79,7 +80,7 @@ def query(query_text: Optional[str], index: Optional[str], output: Optional[str]
             sys.exit(1)
 
         # Execute single query
-        result = _execute_single_query(generator, query_text, index, verbose)
+        result = _execute_single_query(generator, query_text, index, verbose, debug=debug)
 
         # Save to output file if specified
         if output:
@@ -95,7 +96,7 @@ def query(query_text: Optional[str], index: Optional[str], output: Optional[str]
         sys.exit(1)
 
 
-def _execute_single_query(generator: QueryGenerator, query_text: str, index: str, verbose: bool) -> dict:
+def _execute_single_query(generator: QueryGenerator, query_text: str, index: str, verbose: bool, debug: bool = False) -> dict:
     """
     Execute a single NL query and display results.
 
@@ -112,6 +113,14 @@ def _execute_single_query(generator: QueryGenerator, query_text: str, index: str
     click.echo(f"Target index: {index}")
 
     result = generator.generate_query(query_text, index)
+
+    # Debug output — show internals before result summary
+    if debug:
+        click.echo(click.style("\n[DEBUG] Raw LLM Response:", fg='yellow'))
+        click.echo(result.get('generated_dsl') or '(none)')
+        if result.get('error'):
+            click.echo(click.style(f"[DEBUG] Error: {result['error']}", fg='yellow'))
+        click.echo(click.style(f"[DEBUG] LLM latency: {result.get('llm_latency_ms', 0):.0f}ms  ES latency: {result.get('es_latency_ms', 0) or 0:.0f}ms", fg='yellow'))
 
     # Display results based on status
     if result['status'] == 'success':
@@ -137,6 +146,12 @@ def _execute_single_query(generator: QueryGenerator, query_text: str, index: str
         if verbose and result.get('generated_dsl'):
             click.echo("\nGenerated (invalid) DSL:")
             click.echo(result['generated_dsl'])
+
+    elif result['status'] == 'no_results':
+        click.echo(click.style("○ Query executed successfully — no matching documents found", fg='yellow'))
+        if verbose and result.get('generated_dsl'):
+            click.echo("\nGenerated DSL:")
+            click.echo(json.dumps(json.loads(result['generated_dsl']), indent=2))
 
     elif result['status'] == 'execution_failed':
         click.echo(click.style("✗ Query execution failed", fg='red'))
@@ -219,15 +234,19 @@ def _run_interactive_mode(generator: QueryGenerator, default_index: Optional[str
 
 
 @cli.command()
-@click.argument('queries_file', type=click.Path(exists=True))
-@click.option('--index', required=True, help='Target Elasticsearch index name')
+@click.argument('queries_file', required=False, type=click.Path(exists=True))
+@click.option('--corpus', type=click.Path(exists=True), help='JSON corpus file with query+index pairs (multi-index batch)')
+@click.option('--index', help='Target Elasticsearch index name (single-index batch mode)')
 @click.option('--output', '-o', type=click.Path(), help='Save batch results to JSON Lines file')
-def batch(queries_file: str, index: str, output: Optional[str]):
+def batch(queries_file: Optional[str], corpus: Optional[str], index: Optional[str], output: Optional[str]):
     """
-    Process multiple queries from a file (one query per line).
+    Process multiple queries from a file.
 
-    Example:
+    Single-index mode (one query per line):
         moi-elastic-nlp batch queries.txt --index person_details -o results.jsonl
+
+    Multi-index corpus mode (JSON with query+index pairs):
+        moi-elastic-nlp batch --corpus data/test_corpus.json --output logs/batch_results.json
     """
     try:
         # Initialize components
@@ -241,33 +260,49 @@ def batch(queries_file: str, index: str, output: Optional[str]):
 
         generator = QueryGenerator(es_client, llm_client, config, logger)
 
-        # Read queries from file
-        with open(queries_file, 'r', encoding='utf-8') as f:
-            queries = [line.strip() for line in f if line.strip()]
+        # Determine mode and load query items
+        query_items = []  # list of (nl_query, index_name)
 
-        if not queries:
-            click.echo("No queries found in file")
+        if corpus:
+            # Multi-index JSON corpus mode: [{"query": "...", "index": "..."}, ...]
+            with open(corpus, 'r', encoding='utf-8') as f:
+                corpus_data = json.load(f)
+            for item in corpus_data:
+                query_items.append((item['query'], item['index']))
+            click.echo(f"Processing {len(query_items)} queries from corpus: {corpus}")
+        elif queries_file and index:
+            # Single-index text file mode
+            with open(queries_file, 'r', encoding='utf-8') as f:
+                queries = [line.strip() for line in f if line.strip()]
+            query_items = [(q, index) for q in queries]
+            click.echo(f"Processing {len(query_items)} queries from {queries_file}")
+            click.echo(f"Target index: {index}")
+        else:
+            click.echo(click.style("✗ Error: Provide either --corpus or both queries_file and --index", fg='red'))
             sys.exit(1)
 
-        click.echo(f"Processing {len(queries)} queries from {queries_file}")
-        click.echo(f"Target index: {index}\n")
+        if not query_items:
+            click.echo("No queries found")
+            sys.exit(1)
 
         # Process each query
         results = []
         success_count = 0
 
-        with click.progressbar(queries, label='Processing queries') as bar:
-            for nl_query in bar:
-                result = generator.generate_query(nl_query, index)
+        with click.progressbar(query_items, label='Processing queries') as bar:
+            for nl_query, idx in bar:
+                result = generator.generate_query(nl_query, idx)
+                result['nl_query'] = nl_query
+                result['index'] = idx
                 results.append(result)
 
                 if result['status'] == 'success':
                     success_count += 1
 
         # Summary
-        click.echo(f"\n✓ Processed {len(queries)} queries")
+        click.echo(f"\n✓ Processed {len(query_items)} queries")
         click.echo(f"  Success: {success_count}")
-        click.echo(f"  Failed: {len(queries) - success_count}")
+        click.echo(f"  Failed: {len(query_items) - success_count}")
 
         # Save results if output specified
         if output:

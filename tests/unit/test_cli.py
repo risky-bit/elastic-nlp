@@ -285,8 +285,8 @@ class TestCLIMetrics:
             ])
 
             # Assert
-            # Should handle gracefully (may show warning but not crash)
-            assert os.path.exists(output_file)
+            # Empty log file: CLI exits with error, no output file written
+            assert result.exit_code != 0 or 'No log entries' in result.output
 
     def test_metrics_command_missing_log_file(self):
         """Test metrics command fails gracefully when log file doesn't exist"""

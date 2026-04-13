@@ -1,67 +1,149 @@
 {
-  "person_details": {
+  "moi-gp-all-profiles-details-v1": {
     "mappings": {
       "properties": {
-        "person_id": {
-          "type": "keyword"
+        "@timestamp": {
+          "type": "date"
         },
-        "name": {
+        "CL_person_full_name_ar": {
           "type": "text",
           "fields": {
+            "autocomplete": {
+              "type": "text",
+              "analyzer": "autocomplete_analyzer",
+              "search_analyzer": "arabic_standard_analyzer"
+            },
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "ngram": {
+              "type": "text",
+              "analyzer": "arabic_icu_ngram_analyzer"
+            },
+            "sast": {
+              "type": "search_as_you_type",
+              "doc_values": false,
+              "max_shingle_size": 3
             }
-          }
+          },
+          "analyzer": "arabic_icu_analyzer"
         },
-        "name_ar": {
-          "type": "text",
-          "analyzer": "arabic"
-        },
-        "nationality": {
-          "type": "keyword"
-        },
-        "dob": {
-          "type": "date",
-          "format": "yyyy-MM-dd||yyyy-MM-dd'T'HH:mm:ss||epoch_millis"
-        },
-        "age": {
-          "type": "integer"
-        },
-        "gender": {
-          "type": "keyword"
-        },
-        "city": {
-          "type": "keyword"
-        },
-        "address": {
-          "type": "text"
-        },
-        "phone": {
-          "type": "keyword"
-        },
-        "email": {
-          "type": "keyword"
-        },
-        "occupation": {
+        "CL_person_full_name_en": {
           "type": "text",
           "fields": {
+            "autocomplete": {
+              "type": "text",
+              "analyzer": "autocomplete_analyzer",
+              "search_analyzer": "standard"
+            },
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "ngram": {
+              "type": "text",
+              "analyzer": "english_ngram_analyzer"
+            },
+            "sast": {
+              "type": "search_as_you_type",
+              "doc_values": false,
+              "max_shingle_size": 3
+            }
+          },
+          "analyzer": "english_ngram_analyzer"
+        },
+        "CL_prs_name_ar_1": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
             }
           }
         },
-        "marital_status": {
+        "CL_prs_name_ar_2": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "CL_prs_name_ar_3": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "CL_prs_name_ar_4": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "CL_prs_name_ar_5": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "CL_prs_name_en_1": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "CL_prs_name_en_2": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "CL_prs_name_en_3": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "CL_prs_name_en_4": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "CL_prs_name_en_5": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "person_natcde": {
           "type": "keyword"
         },
-        "created_at": {
-          "type": "date",
-          "format": "yyyy-MM-dd'T'HH:mm:ss||epoch_millis"
+        "prs_dob": {
+          "type": "keyword"
         },
-        "updated_at": {
-          "type": "date",
-          "format": "yyyy-MM-dd'T'HH:mm:ss||epoch_millis"
+        "prs_gdr": {
+          "type": "keyword"
+        },
+        "prs_qid": {
+          "type": "keyword"
         }
       }
     }

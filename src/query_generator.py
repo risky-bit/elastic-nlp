@@ -52,6 +52,7 @@ class QueryGenerator:
         self.config = config
         self.logger = logger
         self.prompt_template: Optional[str] = None
+        self._field_descriptions: Optional[Dict[str, Any]] = None
 
     def load_prompt_template(self, template_path: str) -> str:
         """
@@ -85,16 +86,39 @@ class QueryGenerator:
 
         Following constitution: Reproducibility (IV) - structured prompt construction
         """
+        # Direct prompt mode: send NL query as-is (matches LoRA fine-tuning training format)
+        if self.config.USE_DIRECT_PROMPT:
+            return nl_query
+
         # Load default template if not already loaded
         if self.prompt_template is None:
-            template_path = Path(__file__).parent.parent / 'data' / 'prompts' / 'prompt_template_v1.txt'
+            template_path = Path(__file__).parent.parent / 'data' / 'prompts' / 'prompt_template_v3.txt'
             self.load_prompt_template(str(template_path))
 
-        # Format mapping as readable JSON
+        # Load field descriptions if not already loaded
+        if self._field_descriptions is None:
+            desc_path = Path(__file__).parent.parent / 'data' / 'prompts' / 'field_descriptions.json'
+            if desc_path.exists():
+                with open(desc_path, 'r', encoding='utf-8') as f:
+                    self._field_descriptions = json.load(f)
+            else:
+                self._field_descriptions = {}
+
+        # Format mapping as readable JSON (fallback only)
         mapping_json = json.dumps(index_mapping, indent=2)
+
+        # Build field descriptions for this index
+        index_name = list(index_mapping.keys())[0] if index_mapping else ''
+        index_descs = self._field_descriptions.get(index_name, {})
+        if index_descs:
+            desc_lines = '\n'.join(f'- {field}: {desc}' for field, desc in index_descs.items())
+        else:
+            # Fallback: use raw mapping if no descriptions available
+            desc_lines = mapping_json
 
         # Fill template placeholders
         prompt = self.prompt_template.replace('{mapping}', mapping_json)
+        prompt = prompt.replace('{field_descriptions}', desc_lines)
         prompt = prompt.replace('{query}', nl_query)
 
         return prompt
@@ -215,7 +239,8 @@ class QueryGenerator:
                 generated_dsl = self.llm_client.generate_dsl(
                     prompt,
                     temperature=self.config.LLM_TEMPERATURE,
-                    max_tokens=self.config.LLM_MAX_TOKENS
+                    max_tokens=self.config.LLM_MAX_TOKENS,
+                    timeout=120  # 2 minutes for local model on CPU/M-series
                 )
                 llm_latency = (time.time() - llm_start) * 1000  # Convert to milliseconds
             except requests.exceptions.ConnectionError as e:
@@ -231,7 +256,7 @@ class QueryGenerator:
             except requests.exceptions.Timeout as e:
                 result['status'] = 'llm_timeout'
                 result['error'] = (
-                    f"vLLM request timed out after {self.llm_client.timeout}s. "
+                    f"vLLM request timed out. "
                     f"The model may be overloaded or the query is too complex. Error: {str(e)}"
                 )
                 result['total_latency_ms'] = (time.time() - start_time) * 1000
@@ -268,8 +293,12 @@ class QueryGenerator:
 
                 result['results'] = search_results
                 result['es_latency_ms'] = es_latency
-                result['status'] = 'success'
                 result['result_count'] = search_results.get('hits', {}).get('total', {}).get('value', 0)
+                if result['result_count'] == 0:
+                    result['status'] = 'no_results'
+                    result['error'] = 'Query executed successfully but no matching documents found'
+                else:
+                    result['status'] = 'success'
 
             except ESConnectionError as es_error:
                 result['status'] = 'es_connection_failed'

@@ -1,0 +1,21 @@
+[
+  {"id": "M01", "tier": "simple", "query": "Find all violations for Qatari nationals"},
+  {"id": "M02", "tier": "simple", "query": "Find all violations for Pakistani nationals"},
+  {"id": "M03", "tier": "simple", "query": "Find all vehicles owned by Qatari nationals"},
+  {"id": "M04", "tier": "simple", "query": "Find all vehicles owned by Indian nationals"},
+
+  {"id": "M05", "tier": "medium", "query": "Find speeding violations for Qatari nationals"},
+  {"id": "M06", "tier": "medium", "query": "Find unpaid violations for Pakistani nationals"},
+  {"id": "M07", "tier": "medium", "query": "Find Toyota vehicles owned by Pakistani nationals"},
+  {"id": "M08", "tier": "medium", "query": "Find vehicles with expired registration owned by Indian nationals"},
+
+  {"id": "M09", "tier": "hard", "query": "Find unpaid speeding violations for Qatari nationals"},
+  {"id": "M10", "tier": "hard", "query": "Find speeding violations for Qatari males"},
+  {"id": "M11", "tier": "hard", "query": "Find Toyota vehicles owned by Pakistani males"},
+  {"id": "M12", "tier": "hard", "query": "Find white vehicles owned by Qatari nationals"},
+
+  {"id": "M13", "tier": "medium", "query": "Find red light violations for Indian nationals"},
+  {"id": "M14", "tier": "medium", "query": "Find paid violations for Qatari nationals"},
+  {"id": "M15", "tier": "medium", "query": "Find vehicles with active registration owned by Qatari nationals"},
+  {"id": "M16", "tier": "hard", "query": "Find unpaid violations for Egyptian nationals"}
+]

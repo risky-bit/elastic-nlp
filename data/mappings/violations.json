@@ -1,0 +1,85 @@
+{
+  "moi-violations-v1": {
+    "mappings": {
+      "properties": {
+        "VLN_NUMBER": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "VLN_TYPE": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "VLC_ENGDSC": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "VLN_STATUS": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "VLN_YEAR": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "VLN_DATE_DATE": {
+          "type": "date"
+        },
+        "VLN_DATE_TIME": {
+          "type": "date"
+        },
+        "VLN_TOTAMT": {
+          "type": "float"
+        },
+        "VLN_PLCDSC": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "VLN_ZONE_NO": {
+          "type": "integer"
+        },
+        "VLN_STREET_NO": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "VLN_PLTNUM": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "VEH_MANUF": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "VEH_MODEL": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "RDR_PICSPD": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "VLN_OWNQID": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "VLN_LICQIDNO": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "CHARGES": {
+          "type": "nested",
+          "properties": {
+            "VLC_ENGDSC": {
+              "type": "keyword",
+              "ignore_above": 256
+            },
+            "VTK_TARAMT": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  }
+}
