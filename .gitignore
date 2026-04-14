@@ -72,3 +72,12 @@ dmypy.json
 # Model adapter weights (large binaries — do not commit)
 adapters/**/*.safetensors
 adapters/**/*.npz
+
+# Generated evaluation and training data (reproducible from scripts)
+data/eval_results_*.json
+data/ground_truth.json
+data/training/train.jsonl
+data/training/valid.jsonl
+
+# Base model weights
+EQuIP-Queries/
