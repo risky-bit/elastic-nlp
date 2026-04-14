@@ -109,7 +109,7 @@ class MultiIndexQueryPlanner:
         except json.JSONDecodeError as e:
             return {'error': f'Invalid JSON from LLM: {str(e)}', 'raw': raw}
 
-        return plan
+        return {'status': 'success', 'plan': plan}
 
     def validate_plan(self, plan: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """

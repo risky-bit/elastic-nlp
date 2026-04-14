@@ -19,6 +19,8 @@ from src.config import Config
 from src.es_client import ESClient
 from src.llm_client import VLLMClient
 from src.query_generator import QueryGenerator
+from src.query_planner import MultiIndexQueryPlanner
+from src.query_executor import MultiIndexExecutor
 from src.logger import setup_query_translation_logger
 from src.metrics import MetricsCalculator
 
@@ -259,22 +261,25 @@ def batch(queries_file: Optional[str], corpus: Optional[str], index: Optional[st
         llm_client = VLLMClient(config)
 
         generator = QueryGenerator(es_client, llm_client, config, logger)
+        planner = MultiIndexQueryPlanner(llm_client, config, logger)
+        executor = MultiIndexExecutor(es_client, logger)
 
         # Determine mode and load query items
-        query_items = []  # list of (nl_query, index_name)
+        query_items = []  # list of (nl_query, index_name, query_type)
 
         if corpus:
-            # Multi-index JSON corpus mode: [{"query": "...", "index": "..."}, ...]
+            # Multi-index JSON corpus mode: [{"query": "...", "index": "...", "type": "single"|"multi"}, ...]
             with open(corpus, 'r', encoding='utf-8') as f:
                 corpus_data = json.load(f)
             for item in corpus_data:
-                query_items.append((item['query'], item['index']))
+                query_type = item.get('type', 'single')  # default to single if not specified
+                query_items.append((item['query'], item['index'], query_type))
             click.echo(f"Processing {len(query_items)} queries from corpus: {corpus}")
         elif queries_file and index:
             # Single-index text file mode
             with open(queries_file, 'r', encoding='utf-8') as f:
                 queries = [line.strip() for line in f if line.strip()]
-            query_items = [(q, index) for q in queries]
+            query_items = [(q, index, 'single') for q in queries]
             click.echo(f"Processing {len(query_items)} queries from {queries_file}")
             click.echo(f"Target index: {index}")
         else:
@@ -290,12 +295,39 @@ def batch(queries_file: Optional[str], corpus: Optional[str], index: Optional[st
         success_count = 0
 
         with click.progressbar(query_items, label='Processing queries') as bar:
-            for nl_query, idx in bar:
-                result = generator.generate_query(nl_query, idx)
-                result['nl_query'] = nl_query
-                result['index'] = idx
-                results.append(result)
+            for nl_query, idx, qtype in bar:
+                if qtype == 'multi':
+                    # Multi-index: use planner + executor
+                    plan_result = planner.plan(nl_query)
+                    if plan_result.get('status') != 'success':
+                        result = {
+                            'nl_query': nl_query,
+                            'index': idx,
+                            'type': 'multi',
+                            'status': 'validation_failed',
+                            'error': plan_result.get('error', 'Plan generation failed'),
+                            'result_count': 0,
+                        }
+                    else:
+                        plan = plan_result['plan']
+                        exec_result = executor.execute_plan(plan)
+                        result = {
+                            'nl_query': nl_query,
+                            'index': idx,
+                            'type': 'multi',
+                            'status': exec_result.get('status', 'other'),
+                            'result_count': exec_result.get('total_count', 0),
+                            'error': exec_result.get('error', ''),
+                            'generated_plan': json.dumps(plan),
+                        }
+                else:
+                    # Single-index: use generator
+                    result = generator.generate_query(nl_query, idx)
+                    result['nl_query'] = nl_query
+                    result['index'] = idx
+                    result['type'] = 'single'
 
+                results.append(result)
                 if result['status'] == 'success':
                     success_count += 1
 

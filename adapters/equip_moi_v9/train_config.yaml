@@ -1,13 +1,13 @@
 model: EQuIP-Queries/EQuIP_3B
 train: true
 data: data/training
-adapter_path: adapters/equip_moi_v6
+adapter_path: adapters/equip_moi_v9
 fine_tune_type: lora
-iters: 700
+iters: 1000
 batch_size: 2
 num_layers: 8
 learning_rate: 1e-5
-steps_per_eval: 200
+steps_per_eval: 500
 val_batches: 25
 save_every: 100
 seed: 0
