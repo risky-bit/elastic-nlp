@@ -68,3 +68,7 @@ dmypy.json
 # Type checking
 .pyre/
 .pytype/
+
+# Model adapter weights (large binaries — do not commit)
+adapters/**/*.safetensors
+adapters/**/*.npz
