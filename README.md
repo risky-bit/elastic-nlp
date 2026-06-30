@@ -1,260 +1,287 @@
-# MOI Elasticsearch NLP Query System
+# Elasticsearch NLP Query System
 
-**Phase 1 Baseline**: Natural Language to Elasticsearch Query DSL Translation using EQuIP_3B
+Translate natural-language questions into Elasticsearch Query DSL and run them — including
+queries that span **multiple indices** via application-level joins. The system pairs an
+LLM (EQuIP_3B, optionally fine-tuned with LoRA adapters) with a deterministic post-processing
+and execution layer so that plain-English questions become correct, executable ES queries.
 
-## Project Overview
+The data domain is structured records — people, vehicles, traffic violations, visas, sponsors,
+relationships, and entry/exit (travel) history.
 
-This project evaluates different approaches to natural language query translation for Elasticsearch, specifically tailored for MOI (Ministry of Interior) use cases involving person lookups, vehicle records, and traffic violations.
+---
 
-### Phase 1 Goals
+## What it does
 
-- **Baseline Establishment**: Connect EQuIP_3B model (via vLLM) to Elasticsearch 8.11
-- **Test Corpus**: Evaluate system on 30-50 MOI-specific queries
-- **Success Metrics**:
-  - DSL Validity Rate ≥70%
-  - Result Accuracy Rate ≥70%
-- **Purpose**: Establish baseline metrics for Phase 2 comparison
+Given a question like:
 
-### Architecture
+> "Find speeding violations for Qatari nationals"
+
+the system:
+
+1. Detects that the question spans two indices (people → violations).
+2. Generates a **query plan**: look up Qatari nationals in the person index, extract their IDs,
+   then filter the violations index by those IDs plus `type = SPEEDING`.
+3. Executes the plan step-by-step, performing the cross-index join in Python (Elasticsearch
+   has no native cross-index join).
+4. Returns the final results with latency and counts.
+
+Single-index questions ("Find a person named Ahmed Al-Mansoori") skip the planner and go
+straight to DSL generation and execution.
+
+---
+
+## Architecture
 
 ```
-Natural Language Query
-  ↓
-EQuIP_3B (via vLLM API)
-  ↓
-Elasticsearch Query DSL
-  ↓
-Elasticsearch 8.11
-  ↓
-Results
+Natural-language query
+        │
+        ▼
+┌───────────────────────┐
+│  Multi-index?         │  query_planner.py — keyword + LLM detection
+└───────────────────────┘
+     │ no            │ yes
+     ▼               ▼
+ Single DSL      Query plan (ordered steps)
+     │               │
+     ▼               ▼
+┌───────────────────────┐
+│  LLM (EQuIP_3B)       │  llm_client.py → vLLM (OpenAI-compatible API)
+│  + LoRA adapter       │  adapters/equip_moi_v*
+└───────────────────────┘
+        │
+        ▼
+┌───────────────────────┐
+│  DSLTransformer       │  dsl_transformer.py — e.g. "Qatari" → "634"
+└───────────────────────┘
+        │
+        ▼
+┌───────────────────────┐
+│  Executor             │  query_executor.py — runs steps, injects $step_N
+│                       │  es_client.py — talks to Elasticsearch 8.11
+└───────────────────────┘
+        │
+        ▼
+     Results + metrics
 ```
 
-**Modular Components**:
-- `src/config.py`: Environment configuration management
-- `src/logger.py`: Structured JSON logging
-- `src/es_client.py`: Elasticsearch operations
-- `src/llm_client.py`: vLLM API client
-- `src/query_generator.py`: Query translation orchestration
-- `src/metrics.py`: Performance tracking and reporting
-- `src/cli.py`: Command-line interface
+### Source modules (`src/`)
 
-## Prerequisites
+| Module | Responsibility |
+|--------|----------------|
+| `config.py` | Loads/validates environment configuration (`.env`) |
+| `es_client.py` | Elasticsearch connection, health checks, mapping retrieval, query execution |
+| `llm_client.py` | vLLM (OpenAI-compatible) client for DSL generation |
+| `query_generator.py` | Single-index pipeline: prompt → LLM → validate → execute → log |
+| `query_planner.py` | Detects multi-index queries and generates an ordered query plan |
+| `query_executor.py` | Executes multi-step plans, performing application-level joins |
+| `dsl_transformer.py` | Post-processes DSL (e.g. nationality name → numeric code) |
+| `metrics.py` | Aggregates translation logs into accuracy/validity reports |
+| `logger.py` | Structured JSON logging of every translation |
+| `cli.py` | Command-line interface (`query`, `batch`, `metrics`) |
 
-### Option 1: Docker Compose (Recommended - Easiest)
+### Indices and join keys
 
-- **Docker** with Docker Compose installed
-- **NVIDIA Docker** (for GPU support, optional but recommended)
-- **8GB+ RAM** (4GB for Elasticsearch, 4GB+ for vLLM)
-- **GPU** (optional, but 10-100x faster inference)
+Cross-index joins use shared ID fields:
 
-### Option 2: Manual Setup
+| From (person) | To | Join key |
+|---------------|-----|----------|
+| `moi-gp-all-profiles-details-v1` | `moi-violations-v1` | `prs_qid` ↔ `VLN_OWNQID` |
+| `moi-gp-all-profiles-details-v1` | `moi-vehicle-info-v1` | `prs_qid` ↔ `VRG_OWNQID` |
 
-1. **Python 3.10+** installed
-2. **Docker** running with Elasticsearch 8.11
-3. **vLLM** server running with EQuIP_3B model
-4. **Existing MOI data** in Elasticsearch indices:
-   - `person_details`
-   - `vehicle`
-   - `violations`
+Additional indices include visas, sponsors, relationships, and entry/exit details.
 
-## Quick Start
+---
 
-### Setup Option 1: Docker Compose (Recommended)
+## Models and fine-tuning
 
-**Step 1: Start Infrastructure**
+- **Base model**: `EQuIP-Queries/EQuIP_3B`, served via [vLLM](https://github.com/vllm-project/vllm)
+  through an OpenAI-compatible API.
+- **LoRA adapters**: iteratively fine-tuned with [MLX](https://github.com/ml-explore/mlx-lm).
+  Versions live under `adapters/equip_moi_v1 … v9` (v10 in progress). Each adapter directory
+  holds checkpoint `*.safetensors`, an `adapter_config.json`, and the `train_config.yaml`
+  used to produce it.
 
-```bash
-# With GPU (recommended - 10-100x faster)
-docker-compose up -d
+Training pairs are generated by `scripts/generate_v*_training.py` and `data/generate_*.py`,
+written into `data/training/`, then fine-tuned with MLX LoRA. A representative config
+(`adapters/equip_moi_v9/train_config.yaml`):
 
-# OR without GPU (CPU only, slower)
-docker-compose -f docker-compose.cpu.yml up -d
-
-# Check status
-docker-compose ps
-
-# View logs
-docker-compose logs -f vllm        # vLLM server logs
-docker-compose logs -f elasticsearch  # Elasticsearch logs
-```
-
-**Step 2: Wait for Services to Start**
-
-```bash
-# Check Elasticsearch health (should show status: green or yellow)
-curl -u elastic:elastic "http://localhost:9200/_cluster/health?pretty"
-
-# Check vLLM server (should return model info)
-curl http://localhost:8000/v1/models
-```
-
-**Step 3: Setup Python Environment**
-
-```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env - set ES_PASSWORD=elastic (or your custom password)
-```
-
-**Step 4: Load MOI Test Data (if needed)**
-
-```bash
-# TODO: Add your MOI data loading script here
-# Example: python scripts/load_moi_data.py
-```
-
-**Step 5: Run a Test Query**
-
-```bash
-python -m src.cli query \
-  --query "Find person named Ahmed Al-Mansoori" \
-  --index person_details
-```
-
-**Stopping Services**
-
-```bash
-# Stop containers
-docker-compose down
-
-# Stop and remove volumes (WARNING: deletes all data!)
-docker-compose down -v
+```yaml
+model: EQuIP-Queries/EQuIP_3B
+fine_tune_type: lora
+data: data/training
+iters: 1000
+num_layers: 8
+learning_rate: 1e-5
+max_seq_length: 2048
+lora_parameters:
+  rank: 8
+  scale: 20.0
 ```
 
 ---
 
-### Setup Option 2: Manual Setup
+## Prerequisites
 
-### 1. Environment Setup
+- **Python 3.10+**
+- **Docker** + Docker Compose (for Elasticsearch 8.11 and vLLM)
+- **8GB+ RAM** (≈4GB Elasticsearch, ≈4GB+ vLLM); a **GPU** is optional but greatly speeds inference
+- For LoRA training: an Apple-silicon Mac (MLX) or adapt the config to your training stack
+
+---
+
+## Quick start
+
+### 1. Start infrastructure (Docker Compose)
 
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# With GPU
+docker-compose up -d
 
-# Install dependencies
-pip install -r requirements.txt
+# CPU only (slower)
+docker-compose -f docker-compose.cpu.yml up -d
 
-# Configure environment
-cp .env.example .env
-# Edit .env with your Elasticsearch credentials
+docker-compose ps
+docker-compose logs -f vllm
+docker-compose logs -f elasticsearch
 ```
 
-### 2. Start vLLM Server (Manual Setup Only)
+Wait for services to be ready:
 
 ```bash
-# Install vLLM
-pip install vllm
-
-# Start vLLM server with EQuIP_3B model
-vllm serve "EQuIP-Queries/EQuIP_3B"
-
-# Server will start on http://localhost:8000
-# First run will download the model (~6GB)
-```
-
-### 3. Verify Infrastructure
-
-```bash
-# Check Elasticsearch
-curl -u elastic:your_password "http://localhost:9200/_cluster/health?pretty"
-
-# Check vLLM API
+curl -u elastic:elastic "http://localhost:9200/_cluster/health?pretty"
 curl http://localhost:8000/v1/models
 ```
 
-### 3. Run a Single Query
+### 2. Set up the Python environment
 
 ```bash
+python -m venv venv
+source venv/bin/activate            # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+
+cp .env.example .env
+# Edit .env — set ES_PASSWORD and, if needed, VLLM_URL / index names
+```
+
+### 3. Load data
+
+Ingestion helpers live in `data/`:
+
+```bash
+python data/ingest_all_indices.py     # all indices
+python data/ingest_violations.py      # individual loaders
+python data/ingest_vehicles.py
+python data/ingest_linked_data.py     # linked records for join testing
+```
+
+### 4. Run a query
+
+```bash
+# Single query
+python -m src.cli query \
+  --query "Find person named Ahmed Al-Mansoori" \
+  --index moi-gp-all-profiles-details-v1
+
 # Interactive mode
 python -m src.cli query --interactive
 
-# Direct query
-python -m src.cli query \
-  --query "Find person named Ahmed Al-Mansoori" \
-  --index person_details
+# Verbose / debug (shows generated DSL, raw LLM response, ES errors)
+python -m src.cli query "Find speeding violations for Qatari nationals" --debug
 ```
 
-### 4. Run Test Corpus
+---
+
+## Usage
+
+### CLI commands
+
+| Command | Purpose |
+|---------|---------|
+| `query` | Translate and run a single NL query (single- or multi-index) |
+| `batch` | Process many queries from a file or corpus |
+| `metrics` | Aggregate a translation log into an accuracy/validity report |
 
 ```bash
-# Process full test corpus
+# Batch over a multi-index corpus
 python -m src.cli batch \
-  --corpus data/test_corpus.json \
+  --corpus data/test_corpus_multi.json \
   --output logs/batch_results.json
 
-# Generate metrics report
-python -m src.cli metrics \
-  --input logs/query_translations.jsonl \
-  --output reports/phase1_baseline_metrics.json
+# Metrics report from a translation log
+python -m src.cli metrics logs/query_translations.jsonl \
+  --output reports/metrics.json
 ```
+
+### Evaluation
+
+Two evaluation harnesses compare model output against expected results:
+
+```bash
+# Search-based evaluation
+python evaluate_v2.py
+
+# Ground-truth count-based evaluation (compares COUNT vs data/ground_truth.json)
+USE_DIRECT_PROMPT=true python evaluate_v3.py --corpus data/test_corpus_v2.json
+```
+
+`evaluate_v3.py` classifies each query as `correct`, `wrong_count`, `validation_failed`,
+`execution_failed`, or `no_ground_truth`, and writes results to `data/eval_results_v*.json`.
+
+---
+
+## Project structure
+
+```
+.
+├── src/                      # Application source (see module table above)
+├── adapters/                 # LoRA adapter versions (equip_moi_v1 … v9)
+├── scripts/                  # Training-data generators, ground-truth builder
+├── data/
+│   ├── ingest_*.py           # Elasticsearch ingestion helpers
+│   ├── generate_*.py         # Training-pair generators
+│   ├── mappings/             # Versioned ES index mappings
+│   ├── prompts/              # Versioned prompt templates
+│   ├── lookups/              # Reference data (e.g. nationality_codes.json)
+│   ├── training/             # Generated training data
+│   ├── ground_truth.json     # Expected counts for evaluation
+│   └── test_corpus*.json     # Test query corpora
+├── evaluate_v2.py            # Search-based evaluation
+├── evaluate_v3.py            # Ground-truth evaluation
+├── tests/                    # Unit, integration, contract tests
+├── specs/                    # Spec-Kit feature specs (phase 1, phase 2)
+├── docker-compose.yml        # ES + vLLM (GPU)
+└── docker-compose.cpu.yml    # ES + vLLM (CPU)
+```
+
+---
 
 ## Development
 
-### Test-Driven Development (TDD)
-
-This project follows strict TDD principles per the constitution:
+This project follows test-driven development.
 
 ```bash
-# Run all tests
-pytest tests/ -v
-
-# Run unit tests only
-pytest tests/unit/ -v
-
-# Run integration tests (requires ES + LM Studio running)
-pytest tests/integration/ -v
-
-# Run with coverage
+pytest tests/ -v                                   # all tests
+pytest tests/unit/ -v                              # unit only
+pytest tests/integration/ -v                       # requires ES + vLLM running
 pytest tests/ -v --cov=src --cov-report=term-missing
 ```
 
-### Project Structure
+Linting/formatting: `ruff check .`, `black .`.
 
-```
-moi-elastic-nlp/
-├── src/                   # Application source code
-├── tests/                 # Test suite (unit, integration, contract)
-├── data/                  # Test data and reference files
-│   ├── mappings/          # Versioned ES index mappings
-│   ├── prompts/           # Versioned prompt templates
-│   └── test_corpus.json   # 30-50 MOI test queries
-├── logs/                  # Generated logs (gitignored)
-└── reports/               # Metrics reports (gitignored)
-```
+---
 
-## Constitution Compliance
+## Phases
 
-This project adheres to the MOI Elasticsearch NLP Constitution (v1.2.0):
+- **Phase 1 — Baseline**: single-index NL → DSL translation with EQuIP_3B; establish DSL
+  validity and result-accuracy metrics.
+- **Phase 2 — Multi-index & fine-tuning**: cross-index query planning and application-level
+  joins (`query_planner.py`, `query_executor.py`), plus iterative LoRA fine-tuning
+  (`adapters/equip_moi_v*`) to improve accuracy.
 
-✅ **Modular Architecture**: Clear module boundaries
-✅ **Test-First Development**: TDD enforced (NON-NEGOTIABLE)
-✅ **Dependency Versioning**: Pinned requirements, versioned prompts/mappings
-✅ **Reproducibility**: Structured logging, LLM parameter tracking
-✅ **Integration Testing**: pytest-docker for containerized ES
+See `specs/` for detailed per-phase specifications.
 
-## Phase Roadmap
-
-- **Phase 1 (Current)**: Baseline with EQuIP_3B via LM Studio ← **You are here**
-- **Phase 2A**: Custom wrapper with pre/post-processing
-- **Phase 2B**: Elastic Cloud 9.2 with Agent Builder MCP
-- **Phase 3**: LoRA fine-tuning (conditional, if <80% accuracy in Phase 2)
-
-## Documentation
-
-- [Feature Specification](specs/001-phase1-baseline/spec.md)
-- [Implementation Plan](specs/001-phase1-baseline/plan.md)
-- [Quickstart Guide](specs/001-phase1-baseline/quickstart.md)
-- [Data Model](specs/001-phase1-baseline/data-model.md)
-- [Task Breakdown](specs/001-phase1-baseline/tasks.md)
+---
 
 ## License
 
-MOI Internal Project
+Internal project.

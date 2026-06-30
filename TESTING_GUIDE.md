@@ -2,7 +2,7 @@
 
 ## Current Status
 
-✅ **Elasticsearch**: Running with real MOI data (50 person_details, 50 violations)
+✅ **Elasticsearch**: Running with real test data (50 person_details, 50 violations)
 ✅ **Configuration**: .env configured correctly
 ✅ **Code**: Phase 4 implementation complete (all tests passing)
 ⏳ **vLLM**: Downloading (in progress)

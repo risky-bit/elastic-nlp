@@ -19,13 +19,13 @@ to include multi-phase experimental approach without changing core principles
 ==============================================================================
 -->
 
-# MOI Elasticsearch NLP Query System - Constitution
+# Elasticsearch NLP Query System - Constitution
 
-**Project**: Multi-phase experimental evaluation of NLP-to-Elasticsearch query approaches for MOI production deployment
+**Project**: Multi-phase experimental evaluation of NLP-to-Elasticsearch query approaches for production deployment
 
 ## Project Goals
 
-This project evaluates and compares different approaches to natural language query translation for Elasticsearch, specifically tailored for MOI use cases (person lookups, violations, vehicles). The goal is to identify the optimal solution through controlled experiments across multiple phases.
+This project evaluates and compares different approaches to natural language query translation for Elasticsearch, specifically tailored for structured-records use cases (person lookups, violations, vehicles). The goal is to identify the optimal solution through controlled experiments across multiple phases.
 
 ### Phase Structure
 
@@ -132,7 +132,7 @@ Features requiring cross-module interaction or external system integration must 
 
 **Phase 1 & 2A**:
 - **Python**: 3.10+ (type hints mandatory)
-- **Elasticsearch**: 8.15 (local or MOI environment)
+- **Elasticsearch**: 8.15 (local or target environment)
 - **LM Studio**: Local API (localhost:1234)
 - **Model**: EQuIP_3B via LM Studio API
 - **Dependencies**: Minimal - `elasticsearch`, `requests`, `python-dotenv` + testing/dev tools
